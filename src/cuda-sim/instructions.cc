@@ -1013,15 +1013,11 @@ void add_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
       break;
   }
 
-  // if true the fault sets to zero the result regardless of the type.
-  if (fault_active) {
-    std::cout << "in the corrupted lane\n";
-    data = new ptx_reg_t();
-  } else {
-    // performs addition. Sets carry and overflow if needed.
-    switch (i_type) {
-      case S8_TYPE:
-        data.s64 =
+
+  // performs addition. Sets carry and overflow if needed.
+  switch (i_type) {
+    case S8_TYPE:
+      data.s64 = fault_active ? 0 :
             (src1_data.s64 & 0x0000000FF) + (src2_data.s64 & 0x0000000FF);
         if (((src1_data.s64 & 0x80) - (src2_data.s64 & 0x80)) == 0) {
           overflow = ((src1_data.s64 & 0x80) - (data.s64 & 0x80)) == 0 ? 0 : 1;
@@ -1029,7 +1025,7 @@ void add_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
         carry = (data.u64 & 0x000000100) >> 8;
         break;
       case S16_TYPE:
-        data.s64 =
+        data.s64 = fault_active ? 0 :
             (src1_data.s64 & 0x00000FFFF) + (src2_data.s64 & 0x00000FFFF);
         if (((src1_data.s64 & 0x8000) - (src2_data.s64 & 0x8000)) == 0) {
           overflow =
@@ -1038,7 +1034,7 @@ void add_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
         carry = (data.u64 & 0x000010000) >> 16;
         break;
       case S32_TYPE:
-        data.s64 =
+        data.s64 = fault_active ? 0 :
             (src1_data.s64 & 0x0FFFFFFFF) + (src2_data.s64 & 0x0FFFFFFFF);
         if (((src1_data.s64 & 0x80000000) - (src2_data.s64 & 0x80000000)) ==
             0) {
@@ -1049,38 +1045,43 @@ void add_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
         carry = (data.u64 & 0x100000000) >> 32;
         break;
       case S64_TYPE:
-        data.s64 = src1_data.s64 + src2_data.s64;
+        data.s64 = fault_active ? 0 : src1_data.s64 + src2_data.s64;
         break;
       case U8_TYPE:
-        data.u64 = (src1_data.u64 & 0xFF) + (src2_data.u64 & 0xFF);
+        data.u64 = fault_active ? 0 : (src1_data.u64 & 0xFF) + (src2_data.u64 & 0xFF);
         carry = (data.u64 & 0x100) >> 8;
         break;
       case U16_TYPE:
-        data.u64 = (src1_data.u64 & 0xFFFF) + (src2_data.u64 & 0xFFFF);
+        data.u64 = fault_active ? 0 : (src1_data.u64 & 0xFFFF) + (src2_data.u64 & 0xFFFF);
         carry = (data.u64 & 0x10000) >> 16;
         break;
       case U32_TYPE:
-        data.u64 = (src1_data.u64 & 0xFFFFFFFF) + (src2_data.u64 & 0xFFFFFFFF);
+        data.u64 = fault_active ? 0 : (src1_data.u64 & 0xFFFFFFFF) + (src2_data.u64 & 0xFFFFFFFF);
         carry = (data.u64 & 0x100000000) >> 32;
         break;
       case U64_TYPE:
-        data.u64 = src1_data.u64 + src2_data.u64;
+        data.u64 = fault_active ? 0 : src1_data.u64 + src2_data.u64;
         break;
       case F16_TYPE:
-        data.f16 = src1_data.f16 + src2_data.f16;
+        data.f16 = fault_active ? 0 : src1_data.f16 + src2_data.f16;
         break;  // assert(0); break;
       case F32_TYPE:
-        data.f32 = src1_data.f32 + src2_data.f32;
+        data.f32 = fault_active ? 0 : src1_data.f32 + src2_data.f32;
         break;
       case F64_TYPE:
       case FF64_TYPE:
-        data.f64 = src1_data.f64 + src2_data.f64;
+        data.f64 = fault_active ? 0 : src1_data.f64 + src2_data.f64;
         break;
       default:
         assert(0);
         break;
     }
-  }
+    // if true the fault sets to zero the result regardless of the type.
+    if (fault_active) {
+      std::cout << "in the corrupted lane\n";
+      carry = 0;
+      overflow = 0;
+    }
   fesetround(orig_rm);
 
   thread->set_operand_value(dst, data, i_type, thread, pI, overflow, carry);
