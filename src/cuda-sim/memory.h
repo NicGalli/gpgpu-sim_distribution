@@ -45,6 +45,7 @@
 #include <string.h>
 #include <map>
 #include <string>
+#include <iostream>
 
 typedef address_type mem_addr_t;
 
@@ -56,16 +57,33 @@ class mem_storage {
   mem_storage(const mem_storage &another) {
     m_data = (unsigned char *)calloc(1, BSIZE);
     memcpy(m_data, another.m_data, BSIZE);
+    if (gpgpu_t::has_global_memory_fault) {
+      fault_injection();
+      std::cout << "fault active\n";
+    }
   }
-  mem_storage() { m_data = (unsigned char *)calloc(1, BSIZE); }
+  mem_storage() {
+    m_data = (unsigned char *)calloc(1, BSIZE);
+    if (gpgpu_t::has_global_memory_fault) {
+      fault_injection();
+      std::cout << "fault active\n";
+    }
+  }
   ~mem_storage() { free(m_data); }
 
-  void write(unsigned offset, size_t length, const unsigned char *data) {
+  void write(unsigned offset, size_t length, const unsigned char *data,
+             std::string memory_type, unsigned index) {
     assert(offset + length <= BSIZE);
     memcpy(m_data + offset, data, length);
+    if (gpgpu_t::has_global_memory_fault && memory_type == "global" &&
+        index == m_fault_block) {
+      memcpy(m_data + m_fault_start, m_zeros, m_fault_length);
+    }
+    std::cout << index << " " << offset << " " << length << '\n';
   }
 
-  void read(unsigned offset, size_t length, unsigned char *data) const {
+  void read(unsigned offset, size_t length, unsigned char *data,
+            std::string memory_type, unsigned index) const {
     assert(offset + length <= BSIZE);
     memcpy(data, m_data + offset, length);
   }
@@ -84,8 +102,18 @@ class mem_storage {
   }
 
  private:
+  void fault_injection() {
+    m_fault_block = 393216;
+    m_fault_start = 0;
+    m_fault_length = 10;
+    m_zeros = (unsigned char *)calloc(1, m_fault_length);
+  }
   unsigned m_nbytes;
   unsigned char *m_data;
+  unsigned m_fault_block;
+  unsigned m_fault_start;
+  unsigned m_fault_length;
+  unsigned char *m_zeros;
 };
 
 class ptx_thread_info;

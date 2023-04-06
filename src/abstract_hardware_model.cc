@@ -166,6 +166,12 @@ void gpgpu_functional_sim_config::reg_options(class OptionParser *opp) {
                          &g_ptx_inst_debug_thread_uid,
                          "Thread UID for executed instructions' debug output",
                          "1");
+  //TO BE CONNECTED
+  //custom option for fault injection in functional simulator
+  option_parser_register(opp, "-global_memory_fault", OPT_BOOL,
+                         &m_global_memory_fault,
+                         "Stuck at zero fault in global memory",
+                         "0");
 }
 
 void gpgpu_functional_sim_config::ptx_set_tex_cache_linesize(

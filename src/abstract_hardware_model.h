@@ -508,6 +508,8 @@ class gpgpu_functional_sim_config {
   bool convert_to_ptxplus() const { return m_ptx_convert_to_ptxplus; }
   bool use_cuobjdump() const { return m_ptx_use_cuobjdump; }
   bool experimental_lib_support() const { return m_experimental_lib_support; }
+  //fault injection options
+  bool global_memory_fault() const { return m_global_memory_fault; }
 
   int get_ptx_inst_debug_to_file() const { return g_ptx_inst_debug_to_file; }
   const char *get_ptx_inst_debug_file() const { return g_ptx_inst_debug_file; }
@@ -541,6 +543,8 @@ class gpgpu_functional_sim_config {
   int g_ptx_inst_debug_to_file;
   char *g_ptx_inst_debug_file;
   int g_ptx_inst_debug_thread_uid;
+  //fault injection options
+  int m_global_memory_fault;
 
   unsigned m_texcache_linesize;
 };
@@ -558,6 +562,7 @@ class gpgpu_t {
   unsigned resume_CTA;
   unsigned checkpoint_CTA_t;
   int checkpoint_insn_Y;
+  static const bool has_global_memory_fault = 1;
 
   // Move some cycle core stats here instead of being global
   unsigned long long gpu_sim_cycle;

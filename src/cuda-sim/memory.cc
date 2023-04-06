@@ -50,7 +50,7 @@ memory_space_impl<BSIZE>::memory_space_impl(std::string name,
 template <unsigned BSIZE>
 void memory_space_impl<BSIZE>::write_only(mem_addr_t offset, mem_addr_t index,
                                           size_t length, const void *data) {
-  m_data[index].write(offset, length, (const unsigned char *)data);
+  m_data[index].write(offset, length, (const unsigned char *)data, m_name, index);
 }
 
 template <unsigned BSIZE>
@@ -64,7 +64,7 @@ void memory_space_impl<BSIZE>::write(mem_addr_t addr, size_t length,
     // fast route for intra-block access
     unsigned offset = addr & (BSIZE - 1);
     unsigned nbytes = length;
-    m_data[index].write(offset, nbytes, (const unsigned char *)data);
+    m_data[index].write(offset, nbytes, (const unsigned char *)data, m_name, index);
   } else {
     // slow route for inter-block access
     unsigned nbytes_remain = length;
@@ -81,7 +81,7 @@ void memory_space_impl<BSIZE>::write(mem_addr_t addr, size_t length,
 
       size_t tx_bytes = access_limit - offset;
       m_data[page].write(offset, tx_bytes,
-                         &((const unsigned char *)data)[src_offset]);
+                         &((const unsigned char *)data)[src_offset], m_name, index);
 
       // advance pointers
       src_offset += tx_bytes;
@@ -126,7 +126,7 @@ void memory_space_impl<BSIZE>::read_single_block(mem_addr_t blk_idx,
   } else {
     unsigned offset = addr & (BSIZE - 1);
     unsigned nbytes = length;
-    i->second.read(offset, nbytes, (unsigned char *)data);
+    i->second.read(offset, nbytes, (unsigned char *)data, m_name, blk_idx);
   }
 }
 
