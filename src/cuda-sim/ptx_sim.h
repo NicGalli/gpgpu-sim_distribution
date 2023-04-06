@@ -305,7 +305,7 @@ class ptx_thread_info {
   }
 
   void ptx_fetch_inst(inst_t &inst) const;
-  void ptx_exec_inst(warp_inst_t &inst, unsigned lane_id);
+  void ptx_exec_inst(warp_inst_t &inst, unsigned lane_id, unsigned shader_id);
 
   const ptx_version &get_ptx_version() const;
   void set_reg(const symbol *reg, const ptx_reg_t &value);
@@ -459,6 +459,8 @@ class ptx_thread_info {
   // Jin: get corresponding kernel grid for CDP purpose
   kernel_info_t &get_kernel() { return m_kernel; }
 
+  unsigned get_shader_id() { return m_shader_id; }
+  unsigned get_lane_id() { return m_lane_id; }
  public:
   addr_t m_last_effective_address;
   bool m_branch_taken;
@@ -472,6 +474,8 @@ class ptx_thread_info {
   ptx_reg_t m_last_set_operand_value;
 
  private:
+  unsigned m_shader_id;
+  unsigned m_lane_id;
   bool m_functionalSimulationMode;
   unsigned m_uid;
   kernel_info_t &m_kernel;

@@ -983,6 +983,9 @@ void addp_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
 }
 
 void add_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
+  //variable for fault injection in given shader and lane.
+  bool fault_active =
+      (thread->get_shader_id() == 0) && (thread->get_lane_id() == 3);
   ptx_reg_t src1_data, src2_data, data;
   int overflow = 0;
   int carry = 0;
@@ -1010,63 +1013,73 @@ void add_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
       break;
   }
 
-  // performs addition. Sets carry and overflow if needed.
-  switch (i_type) {
-    case S8_TYPE:
-      data.s64 = (src1_data.s64 & 0x0000000FF) + (src2_data.s64 & 0x0000000FF);
-      if (((src1_data.s64 & 0x80) - (src2_data.s64 & 0x80)) == 0) {
-        overflow = ((src1_data.s64 & 0x80) - (data.s64 & 0x80)) == 0 ? 0 : 1;
-      }
-      carry = (data.u64 & 0x000000100) >> 8;
-      break;
-    case S16_TYPE:
-      data.s64 = (src1_data.s64 & 0x00000FFFF) + (src2_data.s64 & 0x00000FFFF);
-      if (((src1_data.s64 & 0x8000) - (src2_data.s64 & 0x8000)) == 0) {
-        overflow =
-            ((src1_data.s64 & 0x8000) - (data.s64 & 0x8000)) == 0 ? 0 : 1;
-      }
-      carry = (data.u64 & 0x000010000) >> 16;
-      break;
-    case S32_TYPE:
-      data.s64 = (src1_data.s64 & 0x0FFFFFFFF) + (src2_data.s64 & 0x0FFFFFFFF);
-      if (((src1_data.s64 & 0x80000000) - (src2_data.s64 & 0x80000000)) == 0) {
-        overflow = ((src1_data.s64 & 0x80000000) - (data.s64 & 0x80000000)) == 0
-                       ? 0
-                       : 1;
-      }
-      carry = (data.u64 & 0x100000000) >> 32;
-      break;
-    case S64_TYPE:
-      data.s64 = src1_data.s64 + src2_data.s64;
-      break;
-    case U8_TYPE:
-      data.u64 = (src1_data.u64 & 0xFF) + (src2_data.u64 & 0xFF);
-      carry = (data.u64 & 0x100) >> 8;
-      break;
-    case U16_TYPE:
-      data.u64 = (src1_data.u64 & 0xFFFF) + (src2_data.u64 & 0xFFFF);
-      carry = (data.u64 & 0x10000) >> 16;
-      break;
-    case U32_TYPE:
-      data.u64 = (src1_data.u64 & 0xFFFFFFFF) + (src2_data.u64 & 0xFFFFFFFF);
-      carry = (data.u64 & 0x100000000) >> 32;
-      break;
-    case U64_TYPE:
-      data.u64 = src1_data.u64 + src2_data.u64;
-      break;
-    case F16_TYPE:
-      data.f16 = src1_data.f16 + src2_data.f16;
-      break;  // assert(0); break;
-    case F32_TYPE:
-      data.f32 = src1_data.f32 + src2_data.f32;
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      data.f64 = src1_data.f64 + src2_data.f64;
-      break;
-    default:
-      assert(0);
-      break;
+  // if true the fault sets to zero the result regardless of the type.
+  if (fault_active) {
+    std::cout << "in the corrupted lane\n";
+    data = new ptx_reg_t();
+  } else {
+    // performs addition. Sets carry and overflow if needed.
+    switch (i_type) {
+      case S8_TYPE:
+        data.s64 =
+            (src1_data.s64 & 0x0000000FF) + (src2_data.s64 & 0x0000000FF);
+        if (((src1_data.s64 & 0x80) - (src2_data.s64 & 0x80)) == 0) {
+          overflow = ((src1_data.s64 & 0x80) - (data.s64 & 0x80)) == 0 ? 0 : 1;
+        }
+        carry = (data.u64 & 0x000000100) >> 8;
+        break;
+      case S16_TYPE:
+        data.s64 =
+            (src1_data.s64 & 0x00000FFFF) + (src2_data.s64 & 0x00000FFFF);
+        if (((src1_data.s64 & 0x8000) - (src2_data.s64 & 0x8000)) == 0) {
+          overflow =
+              ((src1_data.s64 & 0x8000) - (data.s64 & 0x8000)) == 0 ? 0 : 1;
+        }
+        carry = (data.u64 & 0x000010000) >> 16;
+        break;
+      case S32_TYPE:
+        data.s64 =
+            (src1_data.s64 & 0x0FFFFFFFF) + (src2_data.s64 & 0x0FFFFFFFF);
+        if (((src1_data.s64 & 0x80000000) - (src2_data.s64 & 0x80000000)) ==
+            0) {
+          overflow =
+              ((src1_data.s64 & 0x80000000) - (data.s64 & 0x80000000)) == 0 ? 0
+                                                                            : 1;
+        }
+        carry = (data.u64 & 0x100000000) >> 32;
+        break;
+      case S64_TYPE:
+        data.s64 = src1_data.s64 + src2_data.s64;
+        break;
+      case U8_TYPE:
+        data.u64 = (src1_data.u64 & 0xFF) + (src2_data.u64 & 0xFF);
+        carry = (data.u64 & 0x100) >> 8;
+        break;
+      case U16_TYPE:
+        data.u64 = (src1_data.u64 & 0xFFFF) + (src2_data.u64 & 0xFFFF);
+        carry = (data.u64 & 0x10000) >> 16;
+        break;
+      case U32_TYPE:
+        data.u64 = (src1_data.u64 & 0xFFFFFFFF) + (src2_data.u64 & 0xFFFFFFFF);
+        carry = (data.u64 & 0x100000000) >> 32;
+        break;
+      case U64_TYPE:
+        data.u64 = src1_data.u64 + src2_data.u64;
+        break;
+      case F16_TYPE:
+        data.f16 = src1_data.f16 + src2_data.f16;
+        break;  // assert(0); break;
+      case F32_TYPE:
+        data.f32 = src1_data.f32 + src2_data.f32;
+        break;
+      case F64_TYPE:
+      case FF64_TYPE:
+        data.f64 = src1_data.f64 + src2_data.f64;
+        break;
+      default:
+        assert(0);
+        break;
+    }
   }
   fesetround(orig_rm);
 

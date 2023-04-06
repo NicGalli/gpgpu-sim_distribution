@@ -1693,7 +1693,9 @@ int tensorcore_op(int inst_opcode) {
   else
     return 0;
 }
-void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id) {
+void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id, unsigned shader_id) {
+  m_shader_id = shader_id;
+  m_lane_id = lane_id;
   bool skip = false;
   int op_classification = 0;
   addr_t pc = next_instr();
