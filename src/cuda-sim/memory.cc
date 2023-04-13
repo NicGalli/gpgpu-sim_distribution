@@ -126,7 +126,7 @@ void memory_space_impl<BSIZE>::read_single_block(mem_addr_t blk_idx,
   } else {
     unsigned offset = addr & (BSIZE - 1);
     unsigned nbytes = length;
-    i->second.read(offset, nbytes, (unsigned char *)data, m_name, blk_idx);
+    i->second.read(offset, nbytes, (unsigned char *)data);
   }
 }
 

@@ -82,8 +82,7 @@ class mem_storage {
     std::cout << index << " " << offset << " " << length << '\n';
   }
 
-  void read(unsigned offset, size_t length, unsigned char *data,
-            std::string memory_type, unsigned index) const {
+  void read(unsigned offset, size_t length, unsigned char *data) const {
     assert(offset + length <= BSIZE);
     memcpy(data, m_data + offset, length);
   }
